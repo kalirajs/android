@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	
+	<script type="text/javascript" src="js/build/three.min.js"></script>
+	<script type="text/javascript" src="js/lib/stats.min.js"></script>
+	<script type="text/javascript" src="js/lib/dat.gui.js"></script>
+	<script src="js/controls/OrbitControls.js"></script>
+	<script src="js/Detector.js"></script>
+</head>
+<body>
+<div id="WebGL-output"></div>
+
+<div id="Stats-output"></div>
+
+<script type="text/javascript">
+	var contianerFixedPositionX = -16;
+	var contianerFixedPositionY = -1;
+	var contianerFixedPositionZ = 6;
+	var stats = initStats();
+	var scene = new THREE.Scene();
+	scene.fog = new THREE.Fog(0xaaaaaa, 0.010, 200);
+	// to give same effect to all the objects 
+	//scene.overrideMaterial = new THREE.MeshLambertMaterial({color: 0xffffff});
+
+	var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+	camera.position.x = -20;
+    camera.position.y = 18;
+    camera.position.z = 45;
+	camera.lookAt(new THREE.Vector3(20, 10, 10));
+	
+	var orbitControls = new THREE.OrbitControls(camera);
+	var cameraAutoRotate = false;
+    orbitControls.autoRotate = cameraAutoRotate;
+    var clock = new THREE.Clock();
+ 
+	 var noOfRemovedObjFromContainer = 0;
+	 truck_opacity = true;
+		 
+	var controls = new function() {
+		this.dynamicCubeNo = 1;
+		this.Object_Width = 2;	
+		this.Object_Hight = 2;	
+		this.Object_Depth = 2;	
+		this.truck_opacity = true;
+		this.cameraAutoRotate = true;
+		this.insert_object_No = 1;	
+		this.Add_New_Object = function() {
+		// creating multiple objects		
+		//	for (var i = 0; i < controls.dynamicCubeNo; i++) {
+			var i=0;
+			
+			for(i=0; i < controls.insert_object_No; i++) {
+			
+				var retVal = Add_New_Object(truckContainerCubeMesh);
+				if(retVal instanceof THREE.Mesh) {
+					truckContainerCubeMesh.add(retVal);
+				}else {					
+					console.log("Contianer is Full, so empty null value is returned from addNewObject....");
+				}
+				}
+		//		}	
+		// **** END Multiple Cube ***
+		}
+	
+		this.Remove_Object = function() {
+			var len = truckContainerCubeMesh.children.length;
+				if(len>0) {
+					console.log("No of child objects in truckContainerCubeMesh...."+len);
+					var latestMeshObj = truckContainerCubeMesh.children[len-1];
+					z1 = latestMeshObj.geometry.parameters.depth;
+					countChildDepth = countChildDepth - z1;
+					truckContainerCubeMesh.remove(latestMeshObj);
+					isFull = false;
+					noOfRemovedObjFromContainer = noOfRemovedObjFromContainer + 1;
+					
+					if((noOfRemovedObjFromContainer % noOfObjsStoredInDepthDirections) == 0) {
+					countChildWidth = countChildWidth - x1;
+						alert("One row of obj is removed .... "+noOfObjsStoredInDepthDirections);
+					}			
+				} else{
+					console.log("NO child objects in truckContainerCubeMesh....");
+				}
+		}
+	}
+	var materials = [];
+	var containerOpacityVal = 0.4;	
+	var gui = new dat.GUI();
+	var folder1 = gui.addFolder('Object Proerties');
+	gui.add(controls, 'Add_New_Object').name("Add New Object");
+	folder1.add(controls, 'insert_object_No',1,50).step(1).name("No of Objs to be inserted");
+	folder1.add(controls, 'Object_Width').min(1).max(10).step(1).name("Object's Width'");
+	folder1.add(controls, 'Object_Hight').min(1).max(10).step(1).name("Object's Hight");
+	folder1.add(controls, 'Object_Depth').min(1).max(10).step(1).name("Object's Depth");
+	
+	gui.add(controls, 'Remove_Object',0,100).name("Remove latest Object from container");
+	
+	var rotateCameraGui = gui.add(controls, 'cameraAutoRotate').name("Rotate Truck").listen();
+		rotateCameraGui.onChange(function(value){
+        cameraAutoRotate = value
+		
+		console.log("cameraAutoRotate ---- "+cameraAutoRotate)
+		//opacityChange(truck_opacity);			
+		orbitControls = new THREE.OrbitControls(camera);
+		orbitControls.autoRotate = cameraAutoRotate;
+	});
+		
+
+//window.addEventListener('truck_opacity',opacityChange());
+
+ function opacityChange(truck_opacity) {
+	//alert(truck_opacity);
+	var container_color = 0xffff00;
+	materials.push( new THREE.MeshBasicMaterial( {color: container_color, wireframe: false, map: THREE.ImageUtils.loadTexture( 'images/container_skin_1.jpg'), opacity: containerOpacityVal, transparent:truck_opacity } ) ); // back side-door
+	materials.push( new THREE.MeshBasicMaterial( {color: container_color, wireframe: false, map: THREE.ImageUtils.loadTexture( 'images/container_skin_1.jpg'), opacity: 0.8, transparent:truck_opacity } ) ); // truck-front side-engine facing
+	materials.push( new THREE.MeshBasicMaterial( {color: container_color, wireframe: false, map: THREE.ImageUtils.loadTexture( 'images/container_skin_3.jpg'), opacity : containerOpacityVal, transparent:truck_opacity } ) ); //top ceiling side
+	materials.push( new THREE.MeshBasicMaterial( {color: container_color, wireframe: false, map: THREE.ImageUtils.loadTexture( 'images/container_skin_4.jpg') } ) ); // floor/bottom side facing
+	materials.push( new THREE.MeshBasicMaterial( {color: container_color, wireframe: false, map: THREE.ImageUtils.loadTexture( 'images/container_skin_6.jpg'), opacity: containerOpacityVal, transparent:truck_opacity } ) ); // left side - screen facing
+	materials.push( new THREE.MeshBasicMaterial( {color: container_color, wireframe: false, map: THREE.ImageUtils.loadTexture( 'images/container_skin_4.jpg'), opacity: containerOpacityVal, transparent:truck_opacity } ) ); //opacity-1=not visible, 0-visile // right side 
+ 
+	truckContainerCubeMesh = new THREE.Mesh(containerCubeGeometry,  new THREE.MeshFaceMaterial(materials));
+	truckContainerCubeMesh.castShadow = false;
+	truckContainerCubeMesh.position.set(2,8,0);
+	truckFloorCubeMesh.add(truckContainerCubeMesh);
+	truckContainerCubeMesh.scale.y = 3; 
+ }
+		
+	var cameraCube = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+	var renderer = new THREE.WebGLRenderer();
+	renderer.setClearColor(new THREE.Color(0xaaaaff, 1.0));
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMapEnabled = true;
+	
+	 var textureGrass = THREE.ImageUtils.loadTexture('images/grass_img_1.jpg'); //THREE.TextureLoader
+        textureGrass.wrapS = THREE.RepeatWrapping;
+        textureGrass.wrapT = THREE.RepeatWrapping;
+        textureGrass.repeat.set(4, 4);
+
+	 // ground level 
+	//var floorTex = THREE.ImageUtils.loadTexture("images/grass_img_1.jpg")
+        var plane = new THREE.Mesh(new THREE.CubeGeometry(200, 100, 0.1, 30), new THREE.MeshPhongMaterial({color: 0x3c3c3c, map: textureGrass}));
+        plane.position.y = -7.5;
+        plane.rotation.x = -0.5 * Math.PI;
+        scene.add(plane);
+		
+	
+	//truck related....
+	//Truck Main...floor
+	 var textureTruckFloor = THREE.ImageUtils.loadTexture('images/truck_floor_skin_3.jpg'); //THREE.TextureLoader
+        textureTruckFloor.wrapS = THREE.RepeatWrapping;
+        textureTruckFloor.wrapT = THREE.RepeatWrapping;
+        textureTruckFloor.repeat.set(5, 4);
+		
+		
+	/*var textureTruckFrontEngineBottom1 = THREE.ImageUtils.loadTexture("images/truck_floor_skin_1.jpg")
+	var TruckFrontEngineBottom1CubeGeometry = new THREE.BoxGeometry(8,14,10);	
+	var TruckFrontEngineBottom1Material = new THREE.MeshBasicMaterial({color: 0xff9999, wireframe: false, map: textureTruckFrontEngineBottom1});
+	var TruckFrontEngineBottom1Mesh = new THREE.Mesh(TruckFrontEngineBottom1CubeGeometry, TruckFrontEngineBottom1Material);
+	TruckFrontEngineBottom1Mesh.castShadow = false;
+	TruckFrontEngineBottom1Mesh.position.set(-29,-3,2);
+	scene.add(TruckFrontEngineBottom1Mesh);
+	*/
+	
+	var textureTruckFloor2 = THREE.ImageUtils.loadTexture("images/truck_floor_skin_1.jpg")
+	var truckFloorCubeGeometry = new THREE.BoxGeometry(40,4,14);
+	
+	var truckFloorMaterial = new THREE.MeshLambertMaterial({color: 0xff9999, wireframe: false, map: textureTruckFloor});
+	var truckFloorCubeMesh = new THREE.Mesh(truckFloorCubeGeometry, truckFloorMaterial);
+	truckFloorCubeMesh.castShadow = false;
+	truckFloorCubeMesh.position.set(-4,-3,1);	
+	//truckFloorCubeGeometry.computeFaceNormals();	
+	scene.add(truckFloorCubeMesh);
+	
+	//container formation
+	//var containerCubeGeometry = new THREE.BoxGeometry(35,4,14,100,2,2);
+	var containerWidth  = 35;
+	var containerHeight = 4;
+	var containerDepth  = 14;
+	var widthSegments = 50
+	var heightSegments = 4
+	var depthSegments = 4
+	var containerCubeGeometry = new THREE.BoxGeometry(containerWidth, containerHeight, containerDepth, widthSegments, heightSegments,depthSegments);
+	//var truckContainerMaterial = new THREE.MeshLambertMaterial({color: 0xffffff, wireframe: true, map: textureTruckFloor2});//MeshLambertMaterial	
+	var truckContainerCubeMesh = new THREE.Mesh(containerCubeGeometry,  new THREE.MeshFaceMaterial(materials));;
+	opacityChange(truck_opacity) ;
+				
+	var containerOpacity = gui.add(controls, 'truck_opacity').name("Container Transparency").listen();
+		containerOpacity.onChange(function(value){
+        truck_opacity = value;
+		if(value){
+			containerOpacityVal = 0.4;
+		} else{
+			containerOpacityVal = 1;
+		}		
+		opacityChange(truck_opacity);			
+		//truckContainerCubeMesh = new THREE.Mesh(containerCubeGeometry,  new THREE.MeshFaceMaterial(materials));;
+	});							
+				
+	var containerTotalVolumeVal = (containerWidth * containerHeight * containerDepth);
+	console.log("containerAreaVal >>>>> "+containerTotalVolumeVal);
+	// Triangle light...
+	var triangle1 = new THREE.Geometry();
+	var v1 = new THREE.Vector3(16,-1.8,0);
+	var v2 = new THREE.Vector3(16,-4,2);
+	var v3 = new THREE.Vector3(16,-4,-2);
+	
+	console.log("Triagnel verices ... "+triangle1.vertices);
+	triangle1.vertices.push( v1 );
+	triangle1.vertices.push( v2 );
+	triangle1.vertices.push( v3 );
+	
+	triangle1.faces.push( new THREE.Face3( 0, 1, 2 ) );
+	triangle1.computeFaceNormals();
+	
+	var trianlgeTxture = THREE.ImageUtils.loadTexture("images/triangle_ref_1.jpg")
+	
+	var mesh= new THREE.Mesh( triangle1, new THREE.MeshNormalMaterial({wireframe: true, morphTargets:true }) );
+	scene.add(mesh);
+	
+	// Wheel's Mud guard cover formation on both sides'
+	var halfCircleGeometryWheeleFront = new THREE.CircleGeometry( 3.1, 30, 0, Math.PI )
+	var halfcircleMaterial = new THREE.MeshBasicMaterial({color: 0x58D3F7, wireframe: false, opacity:0.3, transparent:true});
+	
+	// Left Side	
+	var halfcircleWheeleFront1 = new THREE.Mesh(halfCircleGeometryWheeleFront, halfcircleMaterial);
+	halfcircleWheeleFront1.castShadow = false;
+	halfcircleWheeleFront1.position.set(-16,-4,9);
+	scene.add(halfcircleWheeleFront1);
+	
+	//var halfcircleWheeleFront = new THREE.Mesh(halfCircleGeometryWheeleFront, halfcircleMaterial);
+	var halfcircleWheeleBack1 = halfcircleWheeleFront1.clone();
+	//halfcircleWheeleBack1.castShadow = false;
+	halfcircleWheeleBack1.position.set(2,-4,9);
+	scene.add(halfcircleWheeleBack1);
+	
+	var halfcircleWheeleBack2 = halfcircleWheeleFront1.clone();
+	halfcircleWheeleBack2.castShadow = true;
+	halfcircleWheeleBack2.position.set(8,-4,9);
+	scene.add(halfcircleWheeleBack2);
+	
+	// Right Side	
+	var halfcircleWheeleFront12 = halfcircleWheeleFront1.clone();
+	halfcircleWheeleFront12.castShadow = false;
+	halfcircleWheeleFront12.position.set(-16,-4,-6);
+	scene.add(halfcircleWheeleFront12);
+	
+	//var halfcircleWheeleFront = new THREE.Mesh(halfCircleGeometryWheeleFront, halfcircleMaterial);
+	var halfcircleWheeleBack12 = halfcircleWheeleFront1.clone();
+	//halfcircleWheeleBack1.castShadow = false;
+	halfcircleWheeleBack12.position.set(2,-4,-5);
+	scene.add(halfcircleWheeleBack12);
+	
+	var halfcircleWheeleBack22 = halfcircleWheeleFront1.clone();
+	halfcircleWheeleBack22.castShadow = true;
+	halfcircleWheeleBack22.position.set(8,-4,-5);
+	scene.add(halfcircleWheeleBack22);
+	
+	// wheels - centre circle-1
+	var radius = 1.5;
+	var segments = 25;
+	var thetaStart = 4;	
+	var thetaLength = 6.3;
+	var wheelColor = 0x0099ff;
+	
+	//Wheels formation
+	var circleGeometryWheeleFront = new THREE.CircleGeometry( radius, segments,thetaStart,thetaLength )
+	var circleMaterial = new THREE.MeshBasicMaterial({color: wheelColor, wireframe: true});
+	
+	var circleWheeleFront = new THREE.Mesh(circleGeometryWheeleFront, circleMaterial);
+	circleWheeleFront.castShadow = true;
+	circleWheeleFront.position.set(-16,-4,8);
+	scene.add(circleWheeleFront);
+	// wheels - centre circle-2	
+	var circleBack1 = new THREE.Mesh(circleGeometryWheeleFront, circleMaterial);
+	circleBack1.castShadow = true;
+	circleBack1.position.set(2,-4,8);
+	scene.add(circleBack1);
+	// wheels - centre circle-3	
+	var circleBack2 = new THREE.Mesh(circleGeometryWheeleFront, circleMaterial);
+	circleBack2.castShadow = true;
+	circleBack2.position.set(8,-4,8);
+	scene.add(circleBack2);
+	
+	//Right side
+	var circleWheeleFront2 = new THREE.Mesh(circleGeometryWheeleFront, circleMaterial);
+	circleWheeleFront2.castShadow = true;
+	circleWheeleFront2.position.set(-16,-4, -6);
+	scene.add(circleWheeleFront2);
+	// wheels - centre circle-2	
+	var circleBack12 = new THREE.Mesh(circleGeometryWheeleFront, circleMaterial);
+	circleBack12.castShadow = true;
+	circleBack12.position.set(2,-4,-6);
+	scene.add(circleBack12);
+	// wheels - centre circle-3	
+	var circleBack22 = new THREE.Mesh(circleGeometryWheeleFront, circleMaterial);
+	circleBack22.castShadow = true;
+	circleBack22.position.set(8,-4,-6);
+	scene.add(circleBack22);
+		
+	// wheels - Tyre-1
+	var tubeRadius = 2;
+	var tubeTube = 0.8;
+	var radialSegments  = 11;
+	var tubularSegments = 40;
+	var arc = 6.3;
+	var tubeColor = 0x000000;
+	var wheelGeometry = new THREE.TorusGeometry( tubeRadius, tubeTube,radialSegments, tubularSegments, arc );
+	//var textureTyre = THREE.ImageUtils.loadTexture("images/truck_floor_skin_3.jpg")
+	var textureTyre = THREE.ImageUtils.loadTexture("images/tyre_3.jpg")
+	var tyreWheelMaterial = new THREE.MeshBasicMaterial( { color: tubeColor, wireframe: true, map: textureTyre} );
+	// LEFT side tube
+	var tyreFront = new THREE.Mesh( wheelGeometry, tyreWheelMaterial );
+	tyreFront.castShadow = true;
+	tyreFront.position.set(-16,-4,8);
+	scene.add( tyreFront );
+	// wheels - Tyre-2
+	var tyreBack1 = new THREE.Mesh( wheelGeometry, tyreWheelMaterial );
+	tyreBack1.castShadow = true;
+	tyreBack1.position.set(2,-4,8);
+	scene.add( tyreBack1 );
+	// wheels - Tyre-3
+	var tyreBack2 = new THREE.Mesh( wheelGeometry, tyreWheelMaterial );
+	tyreBack2.castShadow = true;
+	tyreBack2.position.set(8,-4,8);
+	scene.add( tyreBack2 );
+	
+	// Right side tube
+	var tyreFront = new THREE.Mesh( wheelGeometry, tyreWheelMaterial );
+	tyreFront.castShadow = true;
+	tyreFront.position.set(-16,-4, -6);
+	scene.add( tyreFront );
+	// wheels - Tyre-2
+	var tyreBack1 = new THREE.Mesh( wheelGeometry, tyreWheelMaterial );
+	tyreBack1.castShadow = true;
+	tyreBack1.position.set(2,-4, -6);
+	scene.add( tyreBack1 );
+	// wheels - Tyre-3
+	var tyreBack2 = new THREE.Mesh( wheelGeometry, tyreWheelMaterial );
+	tyreBack2.castShadow = true;
+	tyreBack2.position.set(8,-4, -6);
+	scene.add( tyreBack2 );
+			
+	var spotLight = new THREE.SpotLight( 0xffffff );
+	spotLight.position.set( -40, 60, -10 );
+	spotLight.castShadow = true;
+	scene.add( spotLight );
+	
+	document.body.appendChild(renderer.domElement);
+	renderScene();
+
+	window.addEventListener('resize', onWindowResize, false);
+	 
+	var step=0;
+ 
+	function renderScene() {
+		stats.update();
+			
+	var delta = clock.getDelta();
+        orbitControls.update(delta);	
+	    camera.lookAt(scene.position);
+        cameraCube.rotation = camera.rotation;			
+				
+		requestAnimationFrame(renderScene);
+		renderer.render(scene, camera);	
+	}
+
+	// for showing the statistics box at left corner 
+	function initStats() {
+		var stats = new Stats();
+		stats.setMode(0);
+		stats.domElement.style.position = 'absolute';
+		stats.domElement.style.left = '0px';
+		stats.domElement.style.top = '0px';
+		//$("#Stats-output").append( stats.domElement );
+		document.body.appendChild(stats.domElement);
+		return stats;
+	}	
+	
+	var parentCubeHight = truckContainerCubeMesh.geometry.parameters.height;
+	var parentCubeWidth = truckContainerCubeMesh.geometry.parameters.width;
+	var parentCubeDepth = truckContainerCubeMesh.geometry.parameters.depth;
+	
+	var parentCubePositionX = truckContainerCubeMesh.position.x;
+	var parentCubePositionY = truckContainerCubeMesh.position.y;
+	var parentCubePositionZ = truckContainerCubeMesh.position.z;
+	
+	var count = truckContainerCubeMesh.position.x;
+	
+	//group = new THREE.Object3D();//create an empty container
+	//group.add( cubeTmp );//add a mesh with geometry to it
+	//scene.add( group );//when done, add the group to the scene	
+	var countChildWidth = 0;
+	var countChildDepth = 0;
+	var countChildHight = 0;
+	var totalObjhight = 0;
+	var totalObjWidth = 0;
+	var curLayerWidth = 0;
+	var curLayerHight = 0;
+	var isFull = false;
+	var noOfObjectsWhenFull=0;
+	
+	var noOfObjsStoredInDepthDirections = 0
+	var noOfObjsStoredInWidthXDirections = 0
+	var firstObjX = 0;
+	var firstObjY = 0;
+	var firstObjZ = 0;
+	var firstObjHight =0;
+	var firstObjWidth = 0;
+	var firstObjDepth = 0;
+	
+	var bigObjectPositionX=0;
+	var bigObjectPositionY=0;
+	var bigObjectPositionZ=0;
+	//Surface Area of a Rectangular Prism = 2ab + 2bc + 2ac - Formula
+	var addedCubesTotalVolume = 0;
+	var individualCubeVolume = 0;
+	var color1 ;
+	var color2 ;
+	var color3 ;
+	var layerCount = 0;
+	function Add_New_Object(truckContainerCubeMesh) {
+			
+			var cWidth = controls.Object_Width ;          
+			var cScale = controls.Object_Hight ;
+			var cDepth = controls.Object_Depth ;
+			var oldHight = 2;
+			if(color1 == undefined){			
+				//color = previousColor;
+				color1 = 0xff99ff;
+				color2 = 0x99ff99;
+			}
+          //  var cubeGeometry = new THREE.CubeGeometry(cWidth, oldHight, cDepth,2,2,2);
+		    var cubeGeometry = new THREE.CubeGeometry(cWidth, oldHight, cDepth, 1, 1, 1);
+			var textureBox = THREE.ImageUtils.loadTexture("images/texture_3.jpg")
+			var cubeMaterial = new THREE.MeshBasicMaterial({color: color2, wireframe: false, shading: THREE.FlatShading, vertexColors: THREE.FaceColors, overdraw: true, map:textureBox });   
+			var cubeTmp = new THREE.Mesh(cubeGeometry, cubeMaterial);			
+            cubeTmp.castShadow = true;
+			cubeTmp.dynamic = true;
+			cubeTmp.colorsNeedUpdate = true;
+			
+            var totalLen = truckContainerCubeMesh.children.length;
+			
+			x1 = cubeTmp.geometry.parameters.width;
+			y1 = cubeTmp.geometry.parameters.height;
+			z1 = cubeTmp.geometry.parameters.depth;
+		
+			if(isFull && addedCubesTotalVolume >= containerTotalVolumeVal) {
+					alert("The Container is FULL.... Total objects : "+totalLen);
+					return null;
+			} else {
+				console.log("container is Not FULL  ..."+totalLen);
+				if(totalLen > 0) {
+					var lastGeomObj = truckContainerCubeMesh.children[totalLen-1];
+					previousObjWidth = lastGeomObj.geometry.parameters.width;
+					previousObjDepth = lastGeomObj.geometry.parameters.depth;
+					previousObjHight = lastGeomObj.geometry.parameters.hight;
+					
+					x = lastGeomObj.position.x;
+					y = lastGeomObj.position.y;
+					z = lastGeomObj.position.z;
+					var tmpVar = countChildDepth + z1;
+					//console.log("before adding countChildDepth is :: "+countChildDepth);
+					//console.log("tmpVar depth value = "+tmpVar);
+					
+					if( tmpVar <= parentCubeDepth) {  
+																						
+							if(previousObjWidth != x1){
+								var diff = cWidth - previousObjWidth;								
+								cubeTmp.translateX( x + diff/2 );									
+								setRandomColor();												
+							} else{
+								cubeTmp.position.x = x ;								
+							}
+							
+							if(previousObjDepth != z1){
+								var diff = cDepth - previousObjDepth;								
+								cubeTmp.translateZ( z - z1 + diff/2 );	
+								setRandomColor();
+							} else{
+								cubeTmp.position.z = z - z1 ;								
+							}							
+							cubeTmp.position.y = y ;															
+							countChildDepth = countChildDepth + z1;
+							if(previousObjHight < y1) {
+								curLayerHight = y1;							
+							}
+							
+							if(x1 > previousObjWidth) {
+								curLayerWidth = x1;		
+								countChildWidth -= previousObjWidth;
+								countChildWidth += curLayerWidth;
+							}							
+							
+							noOfObjsStoredInDepthDirections = noOfObjsStoredInDepthDirections +1;
+							//console.log("countChildDepth: "+countChildDepth+" AND parentCubeDepth: "+parentCubeDepth);
+					
+					} else if( tmpVar > parentCubeDepth && countChildWidth+x1 < parentCubeWidth) {	
+						console.log("totalObjcountChildWidth >> "+countChildWidth);
+						console.log("totalObjcountChildWidth + curObj width >> "+(countChildWidth+x1));
+						console.log("parentCubeWidth >> "+parentCubeWidth);
+						
+						cubeTmp.position.x = x + x1;
+						cubeTmp.position.y = y ;
+						
+		//				if(bigObjectPositionX)
+																						
+						if(z1 == 2) {
+							cubeTmp.position.z = firstObjZ;
+						} else if (z1 > 2) {						
+							val = (z1 - 2)/2;
+							val = firstObjZ - val;
+							cubeTmp.position.z = val;
+						} else {
+							val = 2 - z1;
+							val = val/2;
+							val = firstObjZ + val;
+							cubeTmp.position.z = val;
+						}		
+
+						if(previousObjWidth < x1) {
+							curLayerWidth = x1;							
+						}
+						
+						noOfObjsStoredInWidthXDirections += 1;
+						//countChildWidth += x1;
+						countChildWidth += curLayerWidth;
+						countChildDepth = z1;
+						
+						if(previousObjHight < y1) {
+							curLayerHight = y1;							
+						}
+						
+						noOfObjsStoredInDepthDirections = 1;
+				
+					} else { // adding objects to up level layer if it is full at bottom
+						//layerCount += 1;
+						//alert("Layer '"+layerCount+"' is filled from bottom of container.  Total objects are stored at this layer : "+totalLen);
+						totalObjhight += curLayerHight;	
+						//console.log("totalObjhight >> "+totalObjhight);
+						//console.log("parentCubeHight >> "+parentCubeHight);
+						if(totalObjhight  >= parentCubeHight) {
+							totalObjhight = totalObjhight - curLayerHight;							
+							alert("The container's hight is less and will not be able to accomotate anymore such objects... ");
+						} else {
+							//totalObjhight += curLayerHight;								
+						
+							isFull = true;
+							noOfObjectsWhenFull = truckContainerCubeMesh.children.length;
+							
+							if(firstObjWidth != x1){
+								var diff = cWidth - firstObjWidth;
+								if(diff < 0) {
+									diff = firstObjWidth - cWidth;
+								}
+								
+								cubeTmp.translateX( firstObjX + diff/2 );									
+								setRandomColor();												
+							} else{
+								cubeTmp.position.x = firstObjX ;								
+							}
+							
+							// to trim outside object and increase the inside while increasing WIDTH
+							
+							if(z1 == firstObjDepth) {
+								cubeTmp.position.z = firstObjZ;
+							} else if (z1 > firstObjDepth) {						
+								val = (z1 - firstObjDepth)/2;
+								val = firstObjZ - val;
+								cubeTmp.position.z = val;
+							} else {
+								val = firstObjDepth - z1;
+								val = val/2;
+								val = firstObjZ + val;
+								cubeTmp.position.z = val;
+							}	
+											
+							cubeTmp.position.y = firstObjY + firstObjHight ;					
+							
+							countChildDepth = z1;
+							countChildWidth = x1;
+						}
+							
+					}			
+			
+				} else {	
+					//	First Object is placed here.........
+													
+					var fixedObjSize = 2;					
+					
+					cubeTmp.position.y = contianerFixedPositionY;
+					//cubeTmp.position.z = contianerFixedPositionZ;					
+					countChildDepth += z1; 					
+					
+					if( fixedObjSize != x1){
+						var diff = cWidth - fixedObjSize;						
+						cubeTmp.translateX( contianerFixedPositionX + diff/2 );									
+						setRandomColor();												
+					} else{
+						cubeTmp.position.x = contianerFixedPositionX ;								
+					}							
+					
+					if(fixedObjSize != z1){
+						var diff = cDepth - fixedObjSize;
+						cubeTmp.translateZ( contianerFixedPositionZ  - diff/2 );	
+						setRandomColor();
+					} else{
+						cubeTmp.position.z = contianerFixedPositionZ ;								
+					}	
+										
+					firstObjX = contianerFixedPositionX;
+					firstObjY = contianerFixedPositionY;
+					firstObjZ = contianerFixedPositionZ;
+										
+					firstObjHight = fixedObjSize;					
+					firstObjWidth = fixedObjSize;					
+										
+					curLayerHight = y1;		
+					curLayerWidth = x1;			
+					countChildWidth	+= curLayerWidth;				
+				}
+				
+				individualCubeVolume = (cWidth * oldHight * cDepth ) ;
+				 
+			}
+		//	console.log("within function... countChildWidth = "+countChildWidth+", Parent's width = "+parentCubeWidth);
+			count += 1;
+            // add the cube to the scene
+			addedCubesTotalVolume = addedCubesTotalVolume + individualCubeVolume;
+			
+		//	console.log("Added Obj's individualCubeVolume >> "+individualCubeVolume);
+			//console.log("Added Obj's addedCubesTotalVolume >> "+addedCubesTotalVolume);//containerTotalVolumeVal
+			//console.log("containerTotalVolumeVal >> "+containerTotalVolumeVal);
+			
+			function setRandomColor() {
+				color1 = Math.random() * 0xffffff;
+				Color2 = Math.random() * 0x000000;		
+				Color3 = Math.random() * 0x888888;		
+				//changeColor();
+			}
+			
+			function changeColor() {
+				noOfCubeFaces = cubeGeometry.faces.length;
+				for (var i = 0; i < noOfCubeFaces; i++) {  
+					//cubeGeometry.faces[ i ].color.setHex( Math.random() * 0xffffff );		
+					//f.color.setRGB(color2, color2, color2); 					
+					f = cubeGeometry.faces[i];
+					if(i == 0 || i == 3) {
+						f.color.setHex(color2, color2, color2); 
+					} else if(i == 1 || i == 4) {						
+						f.color.setHex(color1, color1, color1); 
+					} else if(i == 2 || i == 5) {						
+						f.color.setHex(color3, color3, color3); 
+					}
+				}
+			}
+			changeColor();
+            return cubeTmp;
+			
+        }
+		
+		
+		 // if the broswer gets resized
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderScene();
+    }
+	
+	
+	function groupObjects() {
+		var group = new THREE.Group();
+
+			for ( var i = 0; i < 1000; i ++ ) {
+
+				var mesh = new THREE.Mesh( geometry, material );
+				mesh.position.x = Math.random() * 2000 - 1000;
+				mesh.position.y = Math.random() * 2000 - 1000;
+				mesh.position.z = Math.random() * 2000 - 1000;
+
+				mesh.rotation.x = Math.random() * 360 * ( Math.PI / 180 );
+				mesh.rotation.y = Math.random() * 360 * ( Math.PI / 180 );
+
+				group.add( mesh );
+			}
+		scene.add( group );
+	}
+
+</script>
+</body>
+</html>	 
